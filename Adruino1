@@ -1,0 +1,112 @@
+#include <Adafruit_GFX.h>
+#include <MCUFRIEND_kbv.h>
+
+MCUFRIEND_kbv tft;
+
+// Định nghĩa màu sắc
+#define BLACK 0x000000000000000
+#define GOLD 0xFEA0
+#define BEIGE 0xF7BB
+#define RED 0xF800
+#define WHITE 0xFFFF
+
+#define btnA1   43
+#define btnA2   41
+#define btnB1   39
+#define btnB2   37
+#define btnM    35
+#define btnX    49
+
+#define Coi     47
+#define Den     45
+#define CBGas   52
+#define GAS_SENSOR_PIN A12  // Cảm biến gas kết nối cổng A12
+
+int countdownTime = 1 * 60; // 1 phút 20 giây
+int Mode = 5;               // Chế độ: 0 - màn hình chính, 1 - đếm ngược, 3 - chế độ mới
+bool isCounting = false;    // Trạng thái đếm ngược, ban đầu là dừng
+bool isYellow = false;      // Đổi màu viền khi hết thời gian
+int Mode1_Status;
+unsigned long timeX,timeCheckSK,timeCheckAlarm, timeGio;
+
+String keyLaygio = "TT"; //TT12X41Y
+String keyLayNgay = "NN"; //NN12X3Y2024Z
+String keyLaySK1=  "SK"; //SK3X12Y41<Gido>
+
+String keyLaygioA = "X";
+String keyLaygioB = "Y";
+
+String keyLaySK2=  "X";
+String keyLaySK3=  "Y";
+String keyLaySK4=  "<";
+String keyLaySK5=  ">";
+
+String keyLayNgayA = "X";
+String keyLayNgayB = "Y";
+String keyLayNgayC = "Z";
+
+String Wifi="SMART BOX";
+String Pass="SMB12345";
+
+int Gio=-1;
+int Phut=-1;
+int Ngay, Thang, Nam;
+String dulieu,dulieu1;
+int GioSKList[]=  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int PhutSKList[]= {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+String contentList[]={"Loading...","Loading...","Loading...","Loading...","Loading...","Loading...","Loading...","Loading...","Loading...","Loading..."};
+// int recSize = 40;
+// int RecSKList1[]={0,recSize,2*recSize,3*recSize,4*recSize,5*recSize,240,280};
+bool newSK=true;
+bool updateData=false;
+bool updateTime=false;
+int STTSK=0;
+unsigned long t_updateData =5000;
+unsigned long t_updateTime;
+void setup() {
+  Serial.begin(9600);
+  Serial1.begin(115200);
+
+  tft.reset();
+  uint16_t identifier = tft.readID();
+  Serial.print("ID = 0x");
+  Serial.println(identifier, HEX);
+  if (identifier == 0xEFEF) identifier = 0x9486;
+  tft.begin(identifier);
+  tft.setRotation(1);
+  tft.fillScreen(BLACK);
+
+  // Cài đặt các nút nhấn
+  pinMode(btnA1, INPUT_PULLUP);
+  pinMode(btnA2, INPUT_PULLUP);
+  pinMode(btnB1, INPUT_PULLUP);
+  pinMode(btnB2, INPUT_PULLUP);
+  pinMode(btnX, INPUT_PULLUP);
+  pinMode(btnM, INPUT_PULLUP);
+  pinMode(Den, OUTPUT);
+  pinMode(Coi, OUTPUT);
+    XSwitchMode();
+}
+
+void loop() {
+  System_A();
+  fnSerialRead();
+  fnUpdateData();
+  fnUpdateTime();
+  fnAlarmSK();
+  getGasSensor();
+}
+int getGasSensor() {
+    int gasValue = analogRead(GAS_SENSOR_PIN);  // Đọc tín hiệu từ cảm biến
+    Serial.print("Giá trị cảm biến gas: ");
+    Serial.println(gasValue);  // Hiển thị giá trị trên Serial Monitor
+
+    // Kiểm tra mức gas vượt ngưỡng cảnh báo
+    int threshold = 400;  // Ngưỡng cảnh báo (có thể thay đổi tùy theo loại cảm biến)
+    if (gasValue > threshold) {
+        Serial.println("CẢNH BÁO: Nồng độ khí gas cao!");
+        // Bạn có thể thêm lệnh bật còi báo động hoặc điều khiển relay tại đây
+    }
+
+    delay(1000);  // Chờ 1 giây trước khi đọc lại
+}
